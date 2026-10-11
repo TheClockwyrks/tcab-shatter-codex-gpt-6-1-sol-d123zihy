@@ -1,92 +1,67 @@
-# Shatter — starter project
+# Shatter
 
-This repository is the starting point for building **Shatter**, the game the
-specification under `specs/` describes. Read `specs/overview.md` first; it says
-how the rest of the specification is organized.
+A browser space shooter built around a gravity well. Fight armored rocks through
+three sizes, curve shots around the star, and save your guided Warhead torpedo for
+a rock that needs to break now. Clear the field to face faster, denser waves while
+an enemy saucer hunts you.
 
-The project is already wired up. It builds on the **Simple 2D** engine, which is
-installed as an ordinary dependency and documents itself under `engine/` — read
-that alongside the specs. What is missing is the game.
+## Run
 
-## What you own
+Requires Node.js compatible with Vite 8.
 
-**`src/game.ts`, and any new files you add beside it.**
+```sh
+npm ci
+npm run dev
+```
 
-Start by declaring and exporting `ShatterState`, exactly as `specs/state.md`
-fixes it, and `ShatterDebugApi`, the debug and automation surface
-`specs/instrumentation.md` specifies. The stub in `src/game.ts` is written
-against both names, so the project does not compile until they exist — a fresh
-workspace failing `npm run typecheck` is the starting point, not a broken seed.
+Open the development server URL printed in the terminal.
 
-`src/game.ts` then exports `game`, a `Game<ShatterState, ShatterDebugApi>`:
-three functions over that state. `initialize` builds the state and the debug
-surface once and returns them together as `[state, debug]`; `update` takes the
-current state as a read-only view (`DeepReadonly<ShatterState>`, from
-`ts-essentials`) and returns the next state, advanced against the frame's delta
-time in seconds; and `render` is handed that next state, read-only again, and
-draws it. The engine holds the state by value and replaces it with whatever
-`update` returns, so a frame builds the next state from the current one rather
-than writing into it, and the type is what guarantees that rendering changes
-nothing. All three currently throw `"not implemented"`. Implement them.
+```sh
+npm run build
+npm run preview
+```
 
-The engine mandates no timestep and hands each frame its real elapsed seconds,
-while `specs/simulation.md` fixes Shatter's own. Accumulate the delta in your
-state and run whole ticks while the accumulator holds one, carrying the
-remainder.
+The production site is entirely contained in `dist/`. Serve that directory from
+any static server, including at a nested base path. There are no external assets,
+network services, or credentials.
 
-The debug surface is a required deliverable. The engine returns it from
-`engine.debug` exactly as `initialize` handed it over, and that is how the game
-is driven from code, so it is present and exactly as `specs/instrumentation.md`
-specifies. Because nothing holds a writable state, its operations are written in
-the shape of `update`: a pose takes the current state and returns the next, and
-a caller applies it through `engine.apply((s) => debug.setShipPosition(s, x, y))`;
-a reading takes the state and returns what it read, as
-`debug.snapshot(engine.state)`. Nothing is published to the page.
+## Controls
 
-`ShatterState` **is a contract**. Keep every field, under the name, type, and
-meaning `specs/state.md` gives it. You may add fields, but only for data you can
-rebuild from the declared ones: the declared fields are the whole of the
-authoritative state, and the surface's `reset()` restores exactly those.
+| Key | Action |
+| --- | --- |
+| Up / W | Thrust |
+| Left / A, Right / D | Turn |
+| Space | Fire; confirm menus |
+| F | Launch guided torpedo; ten-second recharge |
+| Enter | Confirm menus |
+| Up / Down, W / S | Select menu entry |
+| P / Escape | Pause or resume |
+| Escape | Return from instructions or game over |
+| M | Toggle sound |
+| Backtick | Toggle diagnostics |
 
-Tests you write belong beside your sources as `src/**/*.test.ts`. `npm test`
-runs them in process, with coverage over `src/`. The engine's documentation
-carries a complete worked example of testing a game this way.
+Menus also accept mouse and touch. The engine supplies touch flight controls.
+The ship has momentum: turn and thrust against your motion to slow down. The star
+pulls rocks and bullets, but leaves powered craft alone. Its core absorbs shots,
+recycles rocks, and lets the ship slide along its surface.
 
-## What you must not edit
+## Development
 
-- **`src/main.ts`** — the fixed entry point. It creates the engine over the
-  page's canvas, binds `game` to it, and runs.
-- **`src/constants.ts`** — every figure the specification fixes: the field and
-  the star, the gravity law, the ship, the bullets, the torpedo, the rocks and
-  their armor, the saucer, the waves, the score, the screen copy, the action
-  bindings, the cue names. Read from it. The look is deliberately NOT among
-  them.
-- **`index.html`** — the page and the canvas the engine fits the field into.
-- **The toolchain** — `package.json`, `tsconfig.json`, `vite.config.ts`,
-  `vitest.config.ts`, `eslint.config.js`, `.prettierrc.json`, `.gitignore`.
-- **The vendored engine directory** that `package.json` resolves the engine
-  dependency from.
+```sh
+npm run typecheck
+npm run lint
+npm run format
+npm test
+```
 
-Add dependencies to `package.json` if you genuinely need them, and commit the
-`package-lock.json` — the build is installed with `npm ci`. Leave the existing
-entries alone.
+The render-free simulation runs at 120 Hz. `src/game.ts` exports its readonly
+state types and the engine game. `src/simulation.ts` implements transitions,
+`src/debug.ts` supplies the complete pose/read surface and diagnostics, and
+`src/render.ts` draws the field and menus. Tests stand up the actual engine over
+an in-process canvas and a controlled clock.
 
-## Commands
+The debug surface is available only through an engine handle: apply a pose with
+`engine.apply(s => engine.debug.setShipPosition(s, 640, 560))` and inspect it with
+`engine.debug.snapshot(engine.state)`. Nothing is installed on the browser window.
 
-- `npm run dev` — serves the game with hot reload.
-- `npm run build` — type-checks, then emits the static site into `dist/`.
-- `npm run preview` — serves `dist/` for a final check.
-- `npm run typecheck` — `tsc --noEmit`.
-- `npm run lint` — ESLint.
-- `npm run format` — Prettier, in check mode.
-- `npm test` — Vitest over `src/**/*.test.ts`, with coverage.
-
-## Before you finish
-
-- `npm run build` produces `dist/` with `index.html` at its root, and that
-  directory runs as-is on any static host.
-- `npm run typecheck`, `npm run lint`, `npm run format`, and `npm test` all pass.
-  The same four commands are run over the repository you leave behind.
-- **Replace this file** with the `README.md` `specs/overview.md` asks the
-  finished build to ship: what the game is, how to install it, how to run it in
-  development, how to produce the production build, and the controls.
+The player-facing description and captured gameplay carousel live in `showcase/`.
